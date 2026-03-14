@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airbnb Luther — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --white: #ffffff; --off: #f9f8f6; --ink: #111111; --dark: #222222;
+  --mid: #555555; --light: #999999; --rule: #e2e0dc; --rule-dark: #c8c4be;
+  --green: #2D6A4F; --green-bg: #edf4f0;
+  --amber: #8B5E00; --amber-bg: #fdf5e6;
+  --red: #8B0000; --red-bg: #fdf0f0;
+  --blue: #1A3A5C;
+}
+body { font-family: 'EB Garamond', Georgia, serif; background: var(--off); color: var(--dark); min-height: 100vh; }
+.page { max-width: 1180px; margin: 0 auto; padding: 52px 40px 100px; }
+
+/* LOADER */
+.loader {
+  position: fixed; inset: 0; background: var(--off);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 100; transition: opacity 0.4s;
+}
+.loader.hidden { opacity: 0; pointer-events: none; }
+.loader-title { font-size: 18px; color: var(--ink); font-style: italic; margin-bottom: 24px; }
+.loader-bar { width: 200px; height: 1px; background: var(--rule); position: relative; overflow: hidden; }
+.loader-fill { height: 100%; background: var(--ink); animation: loading 1.5s ease-in-out infinite; }
+@keyframes loading { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+.loader-sub { margin-top: 12px; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--light); }
+
+/* HEADER */
+.masthead { display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:12px; border-bottom:2px solid var(--ink); margin-bottom:40px; }
+.masthead-left { display:flex; align-items:baseline; gap:16px; }
+.masthead-title { font-size:24px; font-weight:500; color:var(--ink); letter-spacing:-0.02em; }
+.masthead-sub { font-size:17px; color:var(--light); font-style:italic; }
+.masthead-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.masthead-date { font-family:'DM Mono',monospace; font-size:11px; color:var(--light); }
+.sync-badge { font-family:'DM Mono',monospace; font-size:9px; color:var(--green); letter-spacing:0.05em; }
+
+/* SECTION */
+.section-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--light); margin-bottom:16px; }
+
+/* KPI GRID */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); margin-bottom:48px; }
+.kpi-card { background:var(--white); padding:28px 24px 24px; transition:background 0.15s; animation: fadeUp 0.4s ease both; }
+.kpi-card:nth-child(1){animation-delay:0.05s} .kpi-card:nth-child(2){animation-delay:0.1s}
+.kpi-card:nth-child(3){animation-delay:0.15s} .kpi-card:nth-child(4){animation-delay:0.2s}
+.kpi-card:hover { background:var(--off); }
+.kpi-label { font-size:11px; color:var(--light); margin-bottom:12px; font-style:italic; }
+.kpi-value { font-size:32px; font-weight:500; color:var(--ink); letter-spacing:-0.02em; line-height:1; margin-bottom:8px; }
+.kpi-value.green { color:var(--green); } .kpi-value.amber { color:var(--amber); } .kpi-value.red { color:var(--red); }
+.kpi-sub { font-family:'DM Mono',monospace; font-size:10px; color:var(--light); }
+.quota-wrap { margin-top:10px; height:3px; background:var(--rule); }
+.quota-fill { height:100%; background:var(--ink); transition:width 0.8s ease; }
+.quota-fill.warn { background:var(--amber); } .quota-fill.danger { background:var(--red); }
+
+/* TWO COLS */
+.two-cols { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-bottom:48px; }
+
+/* CHART */
+.chart-area { height:220px; position:relative; border-bottom:1px solid var(--rule-dark); border-left:1px solid var(--rule-dark); margin-bottom:8px; }
+.bar-group { display:flex; align-items:flex-end; height:100%; gap:3px; padding:0 4px; position:relative; }
+.bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; gap:2px; cursor:pointer; }
+.bar-wrap:hover .bar { opacity:0.7; }
+.bar { width:100%; transition:height 0.6s cubic-bezier(0.4,0,0.2,1); }
+.bar.confirmed { background:var(--ink); } .bar.planned { background:var(--rule-dark); }
+.bar-label { font-family:'DM Mono',monospace; font-size:8px; color:var(--light); text-align:center; padding-top:4px; }
+.chart-legend { display:flex; gap:16px; margin-top:8px; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--mid); font-style:italic; }
+.legend-dot { width:8px; height:8px; flex-shrink:0; }
+
+/* UPCOMING */
+.upcoming-item { display:grid; grid-template-columns:90px 1fr auto auto; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--rule); }
+.upcoming-date { font-family:'DM Mono',monospace; font-size:11px; color:var(--mid); }
+.upcoming-guest { font-size:15px; font-style:italic; }
+.upcoming-nights { font-family:'DM Mono',monospace; font-size:11px; color:var(--light); }
+.upcoming-amount { font-family:'DM Mono',monospace; font-size:13px; color:var(--ink); text-align:right; }
+.upcoming-status { font-family:'DM Mono',monospace; font-size:9px; padding:2px 6px; }
+.s-confirmed { color:var(--green); border:1px solid var(--green); }
+.s-planned { color:var(--amber); border:1px solid var(--amber); }
+
+/* MONTHLY TABLE */
+.monthly-table { width:100%; border-collapse:collapse; margin-bottom:48px; font-size:14px; }
+.monthly-table th { font-family:'DM Mono',monospace; font-size:9px; font-weight:400; color:var(--light); text-align:right; padding:8px 10px; border-bottom:1px solid var(--rule-dark); letter-spacing:0.05em; text-transform:uppercase; }
+.monthly-table th:first-child { text-align:left; }
+.monthly-table td { padding:10px 10px; border-bottom:1px solid var(--rule); text-align:right; vertical-align:middle; }
+.monthly-table td:first-child { text-align:left; font-style:italic; }
+.monthly-table tr:hover td { background:var(--off); }
+.monthly-table tr.current td { background:var(--off); font-weight:500; }
+.s-tag { font-family:'DM Mono',monospace; font-size:9px; padding:2px 6px; }
+
+/* FOOTER */
+.dash-footer { padding-top:24px; border-top:1px solid var(--rule); display:flex; justify-content:space-between; align-items:center; }
+.footer-note { font-size:11px; color:var(--light); font-style:italic; }
+.footer-sync { font-family:'DM Mono',monospace; font-size:10px; color:var(--light); }
+
+/* ERROR */
+.error-banner { background:var(--red-bg); border-left:3px solid var(--red); padding:16px 20px; margin-bottom:24px; font-size:13px; color:var(--red); display:none; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* TOOLTIP */
+.tooltip { position:fixed; background:var(--ink); color:var(--white); padding:8px 12px; font-family:'DM Mono',monospace; font-size:11px; pointer-events:none; z-index:200; display:none; line-height:1.6; }
+.tooltip.show { display:block; }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div class="loader" id="loader">
+  <div class="loader-title">Airbnb Luther</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div class="loader-sub">Chargement des données…</div>
+</div>
+
+<div class="page" id="app" style="opacity:0;transition:opacity 0.4s">
+
+  <!-- Error -->
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- Masthead -->
+  <div class="masthead">
+    <div class="masthead-left">
+      <span class="masthead-title">Airbnb Luther</span>
+      <span class="masthead-sub">Tableau de bord</span>
+    </div>
+    <div class="masthead-right">
+      <span class="masthead-date" id="todayDate"></span>
+      <span class="sync-badge" id="syncBadge">● Synchronisé</span>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="section-label">Indicateurs clés — 2026</div>
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card"><div class="kpi-label">Chargement…</div></div>
+    <div class="kpi-card"><div class="kpi-label">Chargement…</div></div>
+    <div class="kpi-card"><div class="kpi-label">Chargement…</div></div>
+    <div class="kpi-card"><div class="kpi-label">Chargement…</div></div>
+  </div>
+
+  <!-- Two cols -->
+  <div class="two-cols">
+    <div>
+      <div class="section-label">Revenus mensuels 2026</div>
+      <div class="chart-area" id="barChart"><div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--light);font-style:italic;font-size:13px">Chargement…</div></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--ink)"></div>Confirmé</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--rule-dark);border:1px solid var(--mid)"></div>Planifié</div>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Prochaines réservations</div>
+      <div id="upcomingList"><div style="color:var(--light);font-style:italic;font-size:13px">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- Monthly table -->
+  <div class="section-label">Détail mensuel 2026</div>
+  <table class="monthly-table">
+    <thead>
+      <tr>
+        <th>Mois</th><th>Nuits</th><th>Quota cumul</th>
+        <th>Revenu brut</th><th>Frais Airbnb</th><th>Revenu net</th>
+        <th>Provision (30%)</th><th>Net après prov.</th><th>Statut</th>
+      </tr>
+    </thead>
+    <tbody id="monthlyBody"></tbody>
+    <tfoot id="monthlyFoot"></tfoot>
+  </table>
+
+  <!-- Footer -->
+  <div class="dash-footer">
+    <span class="footer-note">Données : Google Sheets Airbnb SmartHost · Mis à jour via Apps Script</span>
+    <span class="footer-sync" id="footerSync"></span>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────
+const SHEET_ID = '1QgUGh6tNY0ozLvU9KTtjf1gDnyL-O5Tzdoru3_Xn4aY';
+const TAUX_PROV = 0.30;
+const MOIS_COURT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const MOIS_LONG  = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const eur = n => new Intl.NumberFormat('fr-BE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
+const eurD = n => new Intl.NumberFormat('fr-BE',{style:'currency',currency:'EUR'}).format(n||0);
+
+function showTip(e, text) {
+  const t = document.getElementById('tooltip');
+  t.textContent = text; t.classList.add('show');
+  t.style.left = (e.clientX+12)+'px'; t.style.top = (e.clientY-10)+'px';
+}
+function hideTip() { document.getElementById('tooltip').classList.remove('show'); }
+
+// ── FETCH GOOGLE SHEETS ───────────────────────────────────────────────────
+async function fetchSheet(sheetName, range) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&range=${range}`;
+  const res = await fetch(url);
+  const text = await res.text();
+  // Google wraps response in google.visualization.Query.setResponse(...)
+  const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+  return json.table;
+}
+
+function tableToRows(table) {
+  const headers = table.cols.map(c => c.label);
+  const rows = table.rows.map(r =>
+    Object.fromEntries(headers.map((h, i) => [h, r.c[i]?.v ?? null]))
+  );
+  return { headers, rows };
+}
+
+// ── PARSE DATA ────────────────────────────────────────────────────────────
+function parseReservations(table) {
+  const { rows } = tableToRows(table);
+  return rows.filter(r => r['Guest'] && r['Guest'] !== 'Guest').map(r => ({
+    id:       r['ID'] || '',
+    guest:    r['Guest'] || '',
+    arrivee:  r['Arrivée'] ? new Date(r['Arrivée']) : null,
+    depart:   r['Départ']  ? new Date(r['Départ'])  : null,
+    nuits:    parseFloat(r['Nuits']) || 0,
+    brut:     parseFloat(r['Revenu brut']) || 0,
+    frais:    parseFloat(r['Frais Airbnb']) || 0,
+    net:      parseFloat(r['Revenu net']) || 0,
+    statut:   r['Statut'] || '',
+    mois:     r['Mois (YYYY-MM)'] || '',
+    annee:    r['Année'] || '',
+  }));
+}
+
+function parseRevenus(table) {
+  const { rows } = tableToRows(table);
+  return rows.filter(r => r['Mois (YYYY-MM)']).map(r => ({
+    moisId:   r['Mois (YYYY-MM)'] || '',
+    mois:     r['Mois'] || '',
+    nuits:    parseFloat(r['Nuits estimées']) || 0,
+    brut:     parseFloat(r['Revenu brut (€)']) || 0,
+    frais:    parseFloat(r['Frais Airbnb (€)']) || 0,
+    charges:  parseFloat(r['Charges (€)']) || 0,
+    net:      parseFloat(r['Revenu net (€)']) || 0,
+    prov:     parseFloat(r['Provision impôts 30% (€)']) || 0,
+    apres:    parseFloat(r['Net après provision (€)']) || 0,
+    quota:    parseFloat(r['Quota nuits cumul']) || 0,
+  }));
+}
+
+// ── RENDER KPIs ───────────────────────────────────────────────────────────
+function renderKPIs(revenus, reservations) {
+  const totalNet   = revenus.reduce((s,r) => s+r.net, 0);
+  const totalBrut  = revenus.reduce((s,r) => s+r.brut, 0);
+  const totalNuits = revenus.reduce((s,r) => s+r.nuits, 0);
+  const provision  = totalNet * TAUX_PROV;
+  const netApres   = totalNet - provision;
+  const planifie   = reservations.filter(r => r.statut === 'Planifié').reduce((s,r) => s+r.net, 0);
+
+  const quotaPct   = Math.min(100, totalNuits/90*100);
+  const qClass     = totalNuits >= 90 ? 'danger' : totalNuits >= 75 ? 'warn' : '';
+  const qColor     = totalNuits >= 90 ? 'red'    : totalNuits >= 75 ? 'amber' : '';
+  const qText      = totalNuits >= 90 ? '⚠ quota dépassé' : totalNuits >= 75 ? '⚠ seuil approché' : `encore ${90-totalNuits} nuits disponibles`;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Revenu net 2026</div>
+      <div class="kpi-value green">${eur(totalNet)}</div>
+      <div class="kpi-sub">${eur(totalBrut)} brut total</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Nuits réservées / quota</div>
+      <div class="kpi-value ${qColor}">${totalNuits}<span style="font-size:18px;color:var(--light)"> / 90</span></div>
+      <div class="quota-wrap"><div class="quota-fill ${qClass}" style="width:${quotaPct}%"></div></div>
+      <div class="kpi-sub" style="margin-top:6px">${qText}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Provision impôts (30%)</div>
+      <div class="kpi-value amber">${eur(provision)}</div>
+      <div class="kpi-sub">Net après provision : ${eur(netApres)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Prévisionnel planifié</div>
+      <div class="kpi-value" style="color:var(--rule-dark)">${eur(planifie)}</div>
+      <div class="kpi-sub">Réservations non encore encaissées</div>
+    </div>`;
+}
+
+// ── RENDER CHART ──────────────────────────────────────────────────────────
+function renderChart(revenus) {
+  const maxVal = Math.max(...revenus.map(r => r.brut), 1);
+  const bars = revenus.map((r, i) => {
+    const isPlanned = r.net > 0 && r.nuits > 0;
+    // On détermine si c'est confirmé ou planifié selon les réservations
+    const hPct = (r.brut / maxVal * 100).toFixed(1);
+    return `
+      <div class="bar-wrap"
+        onmouseenter="showTip(event,'${MOIS_COURT[i]} : ${eur(r.net)} net · ${r.nuits} nuits')"
+        onmouseleave="hideTip()">
+        <div class="bar ${r.brut > 0 ? 'confirmed' : ''}" style="height:${hPct}%"></div>
+        <div class="bar-label">${MOIS_COURT[i]}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('barChart').innerHTML = `<div class="bar-group">${bars}</div>`;
+}
+
+// ── RENDER UPCOMING ───────────────────────────────────────────────────────
+function renderUpcoming(reservations) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const upcoming = reservations
+    .filter(r => r.arrivee && r.arrivee >= today)
+    .sort((a,b) => a.arrivee - b.arrivee)
+    .slice(0, 8);
+
+  if (!upcoming.length) {
+    document.getElementById('upcomingList').innerHTML = '<div style="color:var(--light);font-style:italic;font-size:13px">Aucune réservation à venir</div>';
+    return;
+  }
+
+  document.getElementById('upcomingList').innerHTML = upcoming.map(r => {
+    const dateStr = r.arrivee.toLocaleDateString('fr-BE', {day:'numeric', month:'short'});
+    const sClass  = r.statut === 'Confirmé' ? 's-confirmed' : 's-planned';
+    return `
+      <div class="upcoming-item">
+        <div class="upcoming-date">${dateStr}</div>
+        <div class="upcoming-guest">${r.guest}</div>
+        <div class="upcoming-nights">${r.nuits}n</div>
+        <div class="upcoming-amount">${eurD(r.net)}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────
+function renderTable(revenus, reservations) {
+  const now = new Date();
+  const curMois = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  // Déterminer statut par mois depuis les réservations
+  const statutParMois = {};
+  reservations.forEach(r => {
+    if (!statutParMois[r.mois]) statutParMois[r.mois] = new Set();
+    statutParMois[r.mois].add(r.statut);
+  });
+
+  let totBrut=0, totFrais=0, totNet=0, totNuits=0, totProv=0, totApres=0;
+
+  const rows = revenus.map(r => {
+    if (!r.brut && !r.nuits) return '';
+    totBrut+=r.brut; totFrais+=r.frais; totNet+=r.net;
+    totNuits+=r.nuits; totProv+=r.prov; totApres+=r.apres;
+
+    const isCur = r.moisId === curMois;
+    const statuts = statutParMois[r.moisId];
+    let statusHtml = '<span style="color:var(--rule-dark)">—</span>';
+    if (statuts) {
+      if (statuts.has('Planifié') && statuts.has('Confirmé')) {
+        statusHtml = `<span class="s-tag s-confirmed">Confirmé</span> <span class="s-tag s-planned">Planifié</span>`;
+      } else if (statuts.has('Confirmé')) {
+        statusHtml = `<span class="s-tag s-confirmed">Confirmé</span>`;
+      } else if (statuts.has('Planifié')) {
+        statusHtml = `<span class="s-tag s-planned">Planifié</span>`;
+      }
+    }
+
+    return `<tr class="${isCur?'current':''}">
+      <td>${r.mois || r.moisId}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.nuits}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.quota}<span style="color:var(--rule-dark)">/90</span></td>
+      <td>${eurD(r.brut)}</td>
+      <td style="color:var(--light)">${eurD(r.frais)}</td>
+      <td style="font-weight:500">${eurD(r.net)}</td>
+      <td style="color:var(--amber)">${eurD(r.prov)}</td>
+      <td style="font-weight:500">${eurD(r.apres)}</td>
+      <td>${statusHtml}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('monthlyBody').innerHTML = rows;
+  document.getElementById('monthlyFoot').innerHTML = `
+    <tr style="border-top:2px solid var(--ink)">
+      <td style="font-weight:600;font-style:normal">Total</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${totNuits}</td>
+      <td></td>
+      <td style="font-weight:600">${eurD(totBrut)}</td>
+      <td style="color:var(--light)">${eurD(totFrais)}</td>
+      <td style="font-weight:600">${eurD(totNet)}</td>
+      <td style="color:var(--amber);font-weight:600">${eurD(totProv)}</td>
+      <td style="font-weight:600">${eurD(totApres)}</td>
+      <td></td>
+    </tr>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+document.getElementById('todayDate').textContent =
+  new Date().toLocaleDateString('fr-BE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+async function init() {
+  try {
+    // Fetch both sheets in parallel
+    const [tableRes, tableRev] = await Promise.all([
+      fetchSheet('Reservations', 'C3:O'),
+      fetchSheet('Revenus 2026', 'C7:L19'),
+    ]);
+
+    const reservations = parseReservations(tableRes);
+    const revenus      = parseRevenus(tableRev);
+
+    // Filter 2026 only
+    const res2026 = reservations.filter(r => r.annee == 2026 || (r.mois && r.mois.startsWith('2026')));
+
+    renderKPIs(revenus, res2026);
+    renderChart(revenus);
+    renderUpcoming(res2026);
+    renderTable(revenus, res2026);
+
+    // Sync badge
+    const now = new Date();
+    document.getElementById('footerSync').textContent =
+      'Données du ' + now.toLocaleString('fr-BE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('syncBadge').textContent = '● Synchronisé · ' +
+      now.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});
+
+  } catch(err) {
+    console.error(err);
+    const banner = document.getElementById('errorBanner');
+    banner.style.display = 'block';
+    banner.textContent = '⚠ Impossible de charger les données. Vérifie que le Sheet est partagé en public (lecture). Erreur : ' + err.message;
+    document.getElementById('syncBadge').textContent = '● Hors ligne';
+    document.getElementById('syncBadge').style.color = 'var(--red)';
+  } finally {
+    // Hide loader
+    const loader = document.getElementById('loader');
+    loader.classList.add('hidden');
+    setTimeout(() => loader.remove(), 400);
+    document.getElementById('app').style.opacity = '1';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
